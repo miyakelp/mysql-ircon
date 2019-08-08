@@ -14,72 +14,72 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /**
-  @file ha_example.cc
+  @file ha_ircon.cc
 
   @brief
-  The ha_example engine is a stubbed storage engine for example purposes only;
+  The ha_ircon engine is a stubbed storage engine for ircon purposes only;
   it does nothing at this point. Its purpose is to provide a source
   code illustration of how to begin writing new storage engines; see also
-  /storage/example/ha_example.h.
+  /storage/ircon/ha_ircon.h.
 
   @details
-  ha_example will let you create/open/delete tables, but
-  nothing further (for example, indexes are not supported nor can data
-  be stored in the table). Use this example as a template for
+  ha_ircon will let you create/open/delete tables, but
+  nothing further (for ircon, indexes are not supported nor can data
+  be stored in the table). Use this ircon as a template for
   implementing the same functionality in your own storage engine. You
-  can enable the example storage engine in your build by doing the
+  can enable the ircon storage engine in your build by doing the
   following during your build process:<br> ./configure
-  --with-example-storage-engine
+  --with-ircon-storage-engine
 
   Once this is done, MySQL will let you create tables with:<br>
-  CREATE TABLE <table name> (...) ENGINE=EXAMPLE;
+  CREATE TABLE <table name> (...) ENGINE=IRCON;
 
-  The example storage engine is set up to use table locks. It
-  implements an example "SHARE" that is inserted into a hash by table
+  The ircon storage engine is set up to use table locks. It
+  implements an ircon "SHARE" that is inserted into a hash by table
   name. You can use this to store information of state that any
-  example handler object will be able to see when it is using that
+  ircon handler object will be able to see when it is using that
   table.
 
-  Please read the object definition in ha_example.h before reading the rest
+  Please read the object definition in ha_ircon.h before reading the rest
   of this file.
 
   @note
-  When you create an EXAMPLE table, the MySQL Server creates a table .frm
+  When you create an IRCON table, the MySQL Server creates a table .frm
   (format) file in the database directory, using the table name as the file
   name as is customary with MySQL. No other files are created. To get an idea
-  of what occurs, here is an example select that would do a scan of an entire
+  of what occurs, here is an ircon select that would do a scan of an entire
   table:
 
   @code
-  ha_example::store_lock
-  ha_example::external_lock
-  ha_example::info
-  ha_example::rnd_init
-  ha_example::extra
+  ha_ircon::store_lock
+  ha_ircon::external_lock
+  ha_ircon::info
+  ha_ircon::rnd_init
+  ha_ircon::extra
   ENUM HA_EXTRA_CACHE        Cache record in HA_rrnd()
-  ha_example::rnd_next
-  ha_example::rnd_next
-  ha_example::rnd_next
-  ha_example::rnd_next
-  ha_example::rnd_next
-  ha_example::rnd_next
-  ha_example::rnd_next
-  ha_example::rnd_next
-  ha_example::rnd_next
-  ha_example::extra
+  ha_ircon::rnd_next
+  ha_ircon::rnd_next
+  ha_ircon::rnd_next
+  ha_ircon::rnd_next
+  ha_ircon::rnd_next
+  ha_ircon::rnd_next
+  ha_ircon::rnd_next
+  ha_ircon::rnd_next
+  ha_ircon::rnd_next
+  ha_ircon::extra
   ENUM HA_EXTRA_NO_CACHE     End caching of records (def)
-  ha_example::external_lock
-  ha_example::extra
+  ha_ircon::external_lock
+  ha_ircon::extra
   ENUM HA_EXTRA_RESET        Reset database to after open
   @endcode
 
-  Here you see that the example storage engine has 9 rows called before
+  Here you see that the ircon storage engine has 9 rows called before
   rnd_next signals that it has reached the end of its data. Also note that
   the table in question was already opened; had it not been open, a call to
-  ha_example::open() would also have been necessary. Calls to
-  ha_example::extra() are hints as to what will be occuring to the request.
+  ha_ircon::open() would also have been necessary. Calls to
+  ha_ircon::extra() are hints as to what will be occuring to the request.
 
-  A Longer Example can be found called the "Skeleton Engine" which can be 
+  A Longer Ircon can be found called the "Skeleton Engine" which can be 
   found on TangentOrg. It has both an engine and a full build environment
   for building a pluggable storage engine.
 
@@ -88,38 +88,38 @@
 */
 
 #include "sql_class.h"           // MYSQL_HANDLERTON_INTERFACE_VERSION
-#include "ha_example.h"
+#include "ha_ircon.h"
 #include "probes_mysql.h"
 #include "sql_plugin.h"
 
-static handler *example_create_handler(handlerton *hton,
+static handler *ircon_create_handler(handlerton *hton,
                                        TABLE_SHARE *table, 
                                        MEM_ROOT *mem_root);
 
-handlerton *example_hton;
+handlerton *ircon_hton;
 
 /* Interface to mysqld, to check system tables supported by SE */
-static const char* example_system_database();
-static bool example_is_supported_system_table(const char *db,
+static const char* ircon_system_database();
+static bool ircon_is_supported_system_table(const char *db,
                                       const char *table_name,
                                       bool is_sql_layer_system_table);
 
-Example_share::Example_share()
+Ircon_share::Ircon_share()
 {
   thr_lock_init(&lock);
 }
 
 
-static int example_init_func(void *p)
+static int ircon_init_func(void *p)
 {
-  DBUG_ENTER("example_init_func");
+  DBUG_ENTER("ircon_init_func");
 
-  example_hton= (handlerton *)p;
-  example_hton->state=                     SHOW_OPTION_YES;
-  example_hton->create=                    example_create_handler;
-  example_hton->flags=                     HTON_CAN_RECREATE;
-  example_hton->system_database=   example_system_database;
-  example_hton->is_supported_system_table= example_is_supported_system_table;
+  ircon_hton= (handlerton *)p;
+  ircon_hton->state=                     SHOW_OPTION_YES;
+  ircon_hton->create=                    ircon_create_handler;
+  ircon_hton->flags=                     HTON_CAN_RECREATE;
+  ircon_hton->system_database=   ircon_system_database;
+  ircon_hton->is_supported_system_table= ircon_is_supported_system_table;
 
   DBUG_RETURN(0);
 }
@@ -127,22 +127,22 @@ static int example_init_func(void *p)
 
 /**
   @brief
-  Example of simple lock controls. The "share" it creates is a
-  structure we will pass to each example handler. Do you have to have
+  Ircon of simple lock controls. The "share" it creates is a
+  structure we will pass to each ircon handler. Do you have to have
   one of these? Well, you have pieces that are used for locking, and
   they are needed to function.
 */
 
-Example_share *ha_example::get_share()
+Ircon_share *ha_ircon::get_share()
 {
-  Example_share *tmp_share;
+  Ircon_share *tmp_share;
 
-  DBUG_ENTER("ha_example::get_share()");
+  DBUG_ENTER("ha_ircon::get_share()");
 
   lock_shared_ha_data();
-  if (!(tmp_share= static_cast<Example_share*>(get_ha_share_ptr())))
+  if (!(tmp_share= static_cast<Ircon_share*>(get_ha_share_ptr())))
   {
-    tmp_share= new Example_share;
+    tmp_share= new Ircon_share;
     if (!tmp_share)
       goto err;
 
@@ -154,14 +154,14 @@ err:
 }
 
 
-static handler* example_create_handler(handlerton *hton,
+static handler* ircon_create_handler(handlerton *hton,
                                        TABLE_SHARE *table, 
                                        MEM_ROOT *mem_root)
 {
-  return new (mem_root) ha_example(hton, table);
+  return new (mem_root) ha_ircon(hton, table);
 }
 
-ha_example::ha_example(handlerton *hton, TABLE_SHARE *table_arg)
+ha_ircon::ha_ircon(handlerton *hton, TABLE_SHARE *table_arg)
   :handler(hton, table_arg)
 {}
 
@@ -184,13 +184,13 @@ ha_example::ha_example(handlerton *hton, TABLE_SHARE *table_arg)
   delete_table method in handler.cc
 */
 
-static const char *ha_example_exts[] = {
+static const char *ha_ircon_exts[] = {
   NullS
 };
 
-const char **ha_example::bas_ext() const
+const char **ha_ircon::bas_ext() const
 {
-  return ha_example_exts;
+  return ha_ircon_exts;
 }
 
 /*
@@ -198,10 +198,10 @@ const char **ha_example::bas_ext() const
   system database specific to SE. This interface
   is optional, so every SE need not implement it.
 */
-const char* ha_example_system_database= NULL;
-const char* example_system_database()
+const char* ha_ircon_system_database= NULL;
+const char* ircon_system_database()
 {
-  return ha_example_system_database;
+  return ha_ircon_system_database;
 }
 
 /*
@@ -213,7 +213,7 @@ const char* example_system_database()
 
   This array is optional, so every SE need not implement it.
 */
-static st_handler_tablename ha_example_system_tables[]= {
+static st_handler_tablename ha_ircon_system_tables[]= {
   {(const char*)NULL, (const char*)NULL}
 };
 
@@ -229,7 +229,7 @@ static st_handler_tablename ha_example_system_tables[]= {
     @retval TRUE   Given db.table_name is supported system table.
     @retval FALSE  Given db.table_name is not a supported system table.
 */
-static bool example_is_supported_system_table(const char *db,
+static bool ircon_is_supported_system_table(const char *db,
                                               const char *table_name,
                                               bool is_sql_layer_system_table)
 {
@@ -240,7 +240,7 @@ static bool example_is_supported_system_table(const char *db,
     return false;
 
   // Check if this is SE layer system tables
-  systab= ha_example_system_tables;
+  systab= ha_ircon_system_tables;
   while (systab && systab->db)
   {
     if (systab->db == db &&
@@ -269,9 +269,9 @@ static bool example_is_supported_system_table(const char *db,
   handler::ha_open() in handler.cc
 */
 
-int ha_example::open(const char *name, int mode, uint test_if_locked)
+int ha_ircon::open(const char *name, int mode, uint test_if_locked)
 {
-  DBUG_ENTER("ha_example::open");
+  DBUG_ENTER("ha_ircon::open");
 
   if (!(share = get_share()))
     DBUG_RETURN(1);
@@ -296,9 +296,9 @@ int ha_example::open(const char *name, int mode, uint test_if_locked)
   sql_base.cc, sql_select.cc and table.cc
 */
 
-int ha_example::close(void)
+int ha_ircon::close(void)
 {
-  DBUG_ENTER("ha_example::close");
+  DBUG_ENTER("ha_ircon::close");
   DBUG_RETURN(0);
 }
 
@@ -310,7 +310,7 @@ int ha_example::close(void)
   information to extract the data from the native byte array type.
 
   @details
-  Example of this would be:
+  Ircon of this would be:
   @code
   for (Field **field=table->field ; *field ; field++)
   {
@@ -318,8 +318,8 @@ int ha_example::close(void)
   }
   @endcode
 
-  See ha_tina.cc for an example of extracting all of the data as strings.
-  ha_berekly.cc has an example of how to store it intact by "packing" it
+  See ha_tina.cc for an ircon of extracting all of the data as strings.
+  ha_berekly.cc has an ircon of how to store it intact by "packing" it
   for ha_berkeley's own native storage type.
 
   See the note for update_row() on auto_increments. This case also applies to
@@ -333,11 +333,11 @@ int ha_example::close(void)
   sql_insert.cc, sql_select.cc, sql_table.cc, sql_udf.cc and sql_update.cc
 */
 
-int ha_example::write_row(uchar *buf)
+int ha_ircon::write_row(uchar *buf)
 {
-  DBUG_ENTER("ha_example::write_row");
+  DBUG_ENTER("ha_ircon::write_row");
   /*
-    Example of a successful write_row. We don't store the data
+    Ircon of a successful write_row. We don't store the data
     anywhere; they are thrown away. A real implementation will
     probably need to do something with 'buf'. We report a success
     here, to pretend that the insert was successful.
@@ -355,7 +355,7 @@ int ha_example::write_row(uchar *buf)
 
   @details
   Currently new_data will not have an updated auto_increament record. You can
-  do this for example by doing:
+  do this for ircon by doing:
 
   @code
 
@@ -369,10 +369,10 @@ int ha_example::write_row(uchar *buf)
   @see
   sql_select.cc, sql_acl.cc, sql_update.cc and sql_insert.cc
 */
-int ha_example::update_row(const uchar *old_data, uchar *new_data)
+int ha_ircon::update_row(const uchar *old_data, uchar *new_data)
 {
 
-  DBUG_ENTER("ha_example::update_row");
+  DBUG_ENTER("ha_ircon::update_row");
   DBUG_RETURN(HA_ERR_WRONG_COMMAND);
 }
 
@@ -397,9 +397,9 @@ int ha_example::update_row(const uchar *old_data, uchar *new_data)
   sql_acl.cc, sql_udf.cc, sql_delete.cc, sql_insert.cc and sql_select.cc
 */
 
-int ha_example::delete_row(const uchar *buf)
+int ha_ircon::delete_row(const uchar *buf)
 {
-  DBUG_ENTER("ha_example::delete_row");
+  DBUG_ENTER("ha_ircon::delete_row");
   DBUG_RETURN(HA_ERR_WRONG_COMMAND);
 }
 
@@ -411,13 +411,13 @@ int ha_example::delete_row(const uchar *buf)
   index.
 */
 
-int ha_example::index_read_map(uchar *buf, const uchar *key,
+int ha_ircon::index_read_map(uchar *buf, const uchar *key,
                                key_part_map keypart_map MY_ATTRIBUTE((unused)),
                                enum ha_rkey_function find_flag
                                MY_ATTRIBUTE((unused)))
 {
   int rc;
-  DBUG_ENTER("ha_example::index_read");
+  DBUG_ENTER("ha_ircon::index_read");
   MYSQL_INDEX_READ_ROW_START(table_share->db.str, table_share->table_name.str);
   rc= HA_ERR_WRONG_COMMAND;
   MYSQL_INDEX_READ_ROW_DONE(rc);
@@ -430,10 +430,10 @@ int ha_example::index_read_map(uchar *buf, const uchar *key,
   Used to read forward through the index.
 */
 
-int ha_example::index_next(uchar *buf)
+int ha_ircon::index_next(uchar *buf)
 {
   int rc;
-  DBUG_ENTER("ha_example::index_next");
+  DBUG_ENTER("ha_ircon::index_next");
   MYSQL_INDEX_READ_ROW_START(table_share->db.str, table_share->table_name.str);
   rc= HA_ERR_WRONG_COMMAND;
   MYSQL_INDEX_READ_ROW_DONE(rc);
@@ -446,10 +446,10 @@ int ha_example::index_next(uchar *buf)
   Used to read backwards through the index.
 */
 
-int ha_example::index_prev(uchar *buf)
+int ha_ircon::index_prev(uchar *buf)
 {
   int rc;
-  DBUG_ENTER("ha_example::index_prev");
+  DBUG_ENTER("ha_ircon::index_prev");
   MYSQL_INDEX_READ_ROW_START(table_share->db.str, table_share->table_name.str);
   rc= HA_ERR_WRONG_COMMAND;
   MYSQL_INDEX_READ_ROW_DONE(rc);
@@ -467,10 +467,10 @@ int ha_example::index_prev(uchar *buf)
   @see
   opt_range.cc, opt_sum.cc, sql_handler.cc and sql_select.cc
 */
-int ha_example::index_first(uchar *buf)
+int ha_ircon::index_first(uchar *buf)
 {
   int rc;
-  DBUG_ENTER("ha_example::index_first");
+  DBUG_ENTER("ha_ircon::index_first");
   MYSQL_INDEX_READ_ROW_START(table_share->db.str, table_share->table_name.str);
   rc= HA_ERR_WRONG_COMMAND;
   MYSQL_INDEX_READ_ROW_DONE(rc);
@@ -488,10 +488,10 @@ int ha_example::index_first(uchar *buf)
   @see
   opt_range.cc, opt_sum.cc, sql_handler.cc and sql_select.cc
 */
-int ha_example::index_last(uchar *buf)
+int ha_ircon::index_last(uchar *buf)
 {
   int rc;
-  DBUG_ENTER("ha_example::index_last");
+  DBUG_ENTER("ha_ircon::index_last");
   MYSQL_INDEX_READ_ROW_START(table_share->db.str, table_share->table_name.str);
   rc= HA_ERR_WRONG_COMMAND;
   MYSQL_INDEX_READ_ROW_DONE(rc);
@@ -502,7 +502,7 @@ int ha_example::index_last(uchar *buf)
 /**
   @brief
   rnd_init() is called when the system wants the storage engine to do a table
-  scan. See the example in the introduction at the top of this file to see when
+  scan. See the ircon in the introduction at the top of this file to see when
   rnd_init() is called.
 
   @details
@@ -512,15 +512,15 @@ int ha_example::index_last(uchar *buf)
   @see
   filesort.cc, records.cc, sql_handler.cc, sql_select.cc, sql_table.cc and sql_update.cc
 */
-int ha_example::rnd_init(bool scan)
+int ha_ircon::rnd_init(bool scan)
 {
-  DBUG_ENTER("ha_example::rnd_init");
+  DBUG_ENTER("ha_ircon::rnd_init");
   DBUG_RETURN(0);
 }
 
-int ha_example::rnd_end()
+int ha_ircon::rnd_end()
 {
-  DBUG_ENTER("ha_example::rnd_end");
+  DBUG_ENTER("ha_ircon::rnd_end");
   DBUG_RETURN(0);
 }
 
@@ -539,10 +539,10 @@ int ha_example::rnd_end()
   @see
   filesort.cc, records.cc, sql_handler.cc, sql_select.cc, sql_table.cc and sql_update.cc
 */
-int ha_example::rnd_next(uchar *buf)
+int ha_ircon::rnd_next(uchar *buf)
 {
   int rc;
-  DBUG_ENTER("ha_example::rnd_next");
+  DBUG_ENTER("ha_ircon::rnd_next");
   MYSQL_READ_ROW_START(table_share->db.str, table_share->table_name.str,
                        TRUE);
   rc= HA_ERR_END_OF_FILE;
@@ -572,9 +572,9 @@ int ha_example::rnd_next(uchar *buf)
   @see
   filesort.cc, sql_select.cc, sql_delete.cc and sql_update.cc
 */
-void ha_example::position(const uchar *record)
+void ha_ircon::position(const uchar *record)
 {
-  DBUG_ENTER("ha_example::position");
+  DBUG_ENTER("ha_ircon::position");
   DBUG_VOID_RETURN;
 }
 
@@ -592,10 +592,10 @@ void ha_example::position(const uchar *record)
   @see
   filesort.cc, records.cc, sql_insert.cc, sql_select.cc and sql_update.cc
 */
-int ha_example::rnd_pos(uchar *buf, uchar *pos)
+int ha_ircon::rnd_pos(uchar *buf, uchar *pos)
 {
   int rc;
-  DBUG_ENTER("ha_example::rnd_pos");
+  DBUG_ENTER("ha_ircon::rnd_pos");
   MYSQL_READ_ROW_START(table_share->db.str, table_share->table_name.str,
                        TRUE);
   rc= HA_ERR_WRONG_COMMAND;
@@ -642,9 +642,9 @@ int ha_example::rnd_pos(uchar *buf, uchar *pos)
   sql_select.cc, sql_show.cc, sql_show.cc, sql_show.cc, sql_show.cc, sql_table.cc,
   sql_union.cc and sql_update.cc
 */
-int ha_example::info(uint flag)
+int ha_ircon::info(uint flag)
 {
-  DBUG_ENTER("ha_example::info");
+  DBUG_ENTER("ha_ircon::info");
   DBUG_RETURN(0);
 }
 
@@ -658,9 +658,9 @@ int ha_example::info(uint flag)
     @see
   ha_innodb.cc
 */
-int ha_example::extra(enum ha_extra_function operation)
+int ha_ircon::extra(enum ha_extra_function operation)
 {
-  DBUG_ENTER("ha_example::extra");
+  DBUG_ENTER("ha_ircon::extra");
   DBUG_RETURN(0);
 }
 
@@ -684,9 +684,9 @@ int ha_example::extra(enum ha_extra_function operation)
   JOIN::reinit() in sql_select.cc and
   st_select_lex_unit::exec() in sql_union.cc.
 */
-int ha_example::delete_all_rows()
+int ha_ircon::delete_all_rows()
 {
-  DBUG_ENTER("ha_example::delete_all_rows");
+  DBUG_ENTER("ha_ircon::delete_all_rows");
   DBUG_RETURN(HA_ERR_WRONG_COMMAND);
 }
 
@@ -707,9 +707,9 @@ int ha_example::delete_all_rows()
   Truncate_statement in sql_truncate.cc
   Remarks in handler::truncate.
 */
-int ha_example::truncate()
+int ha_ircon::truncate()
 {
-  DBUG_ENTER("ha_example::truncate");
+  DBUG_ENTER("ha_ircon::truncate");
   DBUG_RETURN(HA_ERR_WRONG_COMMAND);
 }
 
@@ -731,9 +731,9 @@ int ha_example::truncate()
   the section "locking functions for mysql" in lock.cc;
   copy_data_between_tables() in sql_table.cc.
 */
-int ha_example::external_lock(THD *thd, int lock_type)
+int ha_ircon::external_lock(THD *thd, int lock_type)
 {
-  DBUG_ENTER("ha_example::external_lock");
+  DBUG_ENTER("ha_ircon::external_lock");
   DBUG_RETURN(0);
 }
 
@@ -751,7 +751,7 @@ int ha_example::external_lock(THD *thd, int lock_type)
   lock (if we don't want to use MySQL table locks at all), or add locks
   for many tables (like we do when we are using a MERGE handler).
 
-  Berkeley DB, for example, changes all WRITE locks to TL_WRITE_ALLOW_WRITE
+  Berkeley DB, for ircon, changes all WRITE locks to TL_WRITE_ALLOW_WRITE
   (which signals that we are doing WRITES, but are still allowing other
   readers and writers).
 
@@ -775,7 +775,7 @@ int ha_example::external_lock(THD *thd, int lock_type)
   @see
   get_lock_data() in lock.cc
 */
-THR_LOCK_DATA **ha_example::store_lock(THD *thd,
+THR_LOCK_DATA **ha_ircon::store_lock(THD *thd,
                                        THR_LOCK_DATA **to,
                                        enum thr_lock_type lock_type)
 {
@@ -805,9 +805,9 @@ THR_LOCK_DATA **ha_example::store_lock(THD *thd,
   @see
   delete_table and ha_create_table() in handler.cc
 */
-int ha_example::delete_table(const char *name)
+int ha_ircon::delete_table(const char *name)
 {
-  DBUG_ENTER("ha_example::delete_table");
+  DBUG_ENTER("ha_ircon::delete_table");
   /* This is not implemented but we want someone to be able that it works. */
   DBUG_RETURN(0);
 }
@@ -827,9 +827,9 @@ int ha_example::delete_table(const char *name)
   @see
   mysql_rename_table() in sql_table.cc
 */
-int ha_example::rename_table(const char * from, const char * to)
+int ha_ircon::rename_table(const char * from, const char * to)
 {
-  DBUG_ENTER("ha_example::rename_table ");
+  DBUG_ENTER("ha_ircon::rename_table ");
   DBUG_RETURN(HA_ERR_WRONG_COMMAND);
 }
 
@@ -847,10 +847,10 @@ int ha_example::rename_table(const char * from, const char * to)
   @see
   check_quick_keys() in opt_range.cc
 */
-ha_rows ha_example::records_in_range(uint inx, key_range *min_key,
+ha_rows ha_ircon::records_in_range(uint inx, key_range *min_key,
                                      key_range *max_key)
 {
-  DBUG_ENTER("ha_example::records_in_range");
+  DBUG_ENTER("ha_ircon::records_in_range");
   DBUG_RETURN(10);                         // low number to force index usage
 }
 
@@ -874,10 +874,10 @@ ha_rows ha_example::records_in_range(uint inx, key_range *min_key,
   ha_create_table() in handle.cc
 */
 
-int ha_example::create(const char *name, TABLE *table_arg,
+int ha_ircon::create(const char *name, TABLE *table_arg,
                        HA_CREATE_INFO *create_info)
 {
-  DBUG_ENTER("ha_example::create");
+  DBUG_ENTER("ha_ircon::create");
   /*
     This is not implemented but we want someone to be able to see that it
     works.
@@ -886,7 +886,7 @@ int ha_example::create(const char *name, TABLE *table_arg,
 }
 
 
-struct st_mysql_storage_engine example_storage_engine=
+struct st_mysql_storage_engine ircon_storage_engine=
 { MYSQL_HANDLERTON_INTERFACE_VERSION };
 
 static ulong srv_enum_var= 0;
@@ -949,7 +949,7 @@ static MYSQL_THDVAR_DOUBLE(
   1000.5,
   0);
 
-static struct st_mysql_sys_var* example_system_variables[]= {
+static struct st_mysql_sys_var* ircon_system_variables[]= {
   MYSQL_SYSVAR(enum_var),
   MYSQL_SYSVAR(ulong_var),
   MYSQL_SYSVAR(double_var),
@@ -957,8 +957,8 @@ static struct st_mysql_sys_var* example_system_variables[]= {
   NULL
 };
 
-// this is an example of SHOW_FUNC and of my_snprintf() service
-static int show_func_example(MYSQL_THD thd, struct st_mysql_show_var *var,
+// this is an ircon of SHOW_FUNC and of my_snprintf() service
+static int show_func_ircon(MYSQL_THD thd, struct st_mysql_show_var *var,
                              char *buf)
 {
   var->type= SHOW_CHAR;
@@ -970,7 +970,7 @@ static int show_func_example(MYSQL_THD thd, struct st_mysql_show_var *var,
   return 0;
 }
 
-struct example_vars_t
+struct ircon_vars_t
 {
 	ulong  var1;
 	double var2;
@@ -980,45 +980,45 @@ struct example_vars_t
   ulong  var6;
 };
 
-example_vars_t example_vars= {100, 20.01, "three hundred", true, 0, 8250};
+ircon_vars_t ircon_vars= {100, 20.01, "three hundred", true, 0, 8250};
 
-static st_mysql_show_var show_status_example[]=
+static st_mysql_show_var show_status_ircon[]=
 {
-  {"var1", (char *)&example_vars.var1, SHOW_LONG, SHOW_SCOPE_GLOBAL},
-  {"var2", (char *)&example_vars.var2, SHOW_DOUBLE, SHOW_SCOPE_GLOBAL},
+  {"var1", (char *)&ircon_vars.var1, SHOW_LONG, SHOW_SCOPE_GLOBAL},
+  {"var2", (char *)&ircon_vars.var2, SHOW_DOUBLE, SHOW_SCOPE_GLOBAL},
   {0,0,SHOW_UNDEF, SHOW_SCOPE_UNDEF} // null terminator required
 };
 
-static struct st_mysql_show_var show_array_example[]=
+static struct st_mysql_show_var show_array_ircon[]=
 {
-  {"array", (char *)show_status_example, SHOW_ARRAY, SHOW_SCOPE_GLOBAL},
-  {"var3", (char *)&example_vars.var3, SHOW_CHAR, SHOW_SCOPE_GLOBAL},
-  {"var4", (char *)&example_vars.var4, SHOW_BOOL, SHOW_SCOPE_GLOBAL},
+  {"array", (char *)show_status_ircon, SHOW_ARRAY, SHOW_SCOPE_GLOBAL},
+  {"var3", (char *)&ircon_vars.var3, SHOW_CHAR, SHOW_SCOPE_GLOBAL},
+  {"var4", (char *)&ircon_vars.var4, SHOW_BOOL, SHOW_SCOPE_GLOBAL},
   {0,0,SHOW_UNDEF, SHOW_SCOPE_UNDEF}
 };
 
 static struct st_mysql_show_var func_status[]=
 {
-  {"example_func_example", (char *)show_func_example, SHOW_FUNC, SHOW_SCOPE_GLOBAL},
-  {"example_status_var5", (char *)&example_vars.var5, SHOW_BOOL, SHOW_SCOPE_GLOBAL},
-  {"example_status_var6", (char *)&example_vars.var6, SHOW_LONG, SHOW_SCOPE_GLOBAL},
-  {"example_status",  (char *)show_array_example, SHOW_ARRAY, SHOW_SCOPE_GLOBAL},
+  {"ircon_func_ircon", (char *)show_func_ircon, SHOW_FUNC, SHOW_SCOPE_GLOBAL},
+  {"ircon_status_var5", (char *)&ircon_vars.var5, SHOW_BOOL, SHOW_SCOPE_GLOBAL},
+  {"ircon_status_var6", (char *)&ircon_vars.var6, SHOW_LONG, SHOW_SCOPE_GLOBAL},
+  {"ircon_status",  (char *)show_array_ircon, SHOW_ARRAY, SHOW_SCOPE_GLOBAL},
   {0,0,SHOW_UNDEF, SHOW_SCOPE_UNDEF}
 };
 
-mysql_declare_plugin(example)
+mysql_declare_plugin(ircon)
 {
   MYSQL_STORAGE_ENGINE_PLUGIN,
-  &example_storage_engine,
-  "EXAMPLE",
+  &ircon_storage_engine,
+  "IRCON",
   "Brian Aker, MySQL AB",
-  "Example storage engine",
+  "Ircon storage engine",
   PLUGIN_LICENSE_GPL,
-  example_init_func,                            /* Plugin Init */
+  ircon_init_func,                            /* Plugin Init */
   NULL,                                         /* Plugin Deinit */
   0x0001 /* 0.1 */,
   func_status,                                  /* status variables */
-  example_system_variables,                     /* system variables */
+  ircon_system_variables,                     /* system variables */
   NULL,                                         /* config options */
   0,                                            /* flags */
 }
