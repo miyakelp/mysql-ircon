@@ -43,7 +43,11 @@
 class Ircon_share : public Handler_share {
 public:
   THR_LOCK lock;
+  int write_fields;
+  bool write_opened;
+
   Ircon_share();
+
   ~Ircon_share()
   {
     thr_lock_delete(&lock);
@@ -183,6 +187,7 @@ public:
     We implement this in ha_ircon.cc. It's not an obligatory method;
     skip it and and MySQL will treat it as not implemented.
   */
+  int init_writer();
   int write_row(uchar *buf);
 
   /** @brief
