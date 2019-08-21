@@ -377,6 +377,8 @@ int ha_ircon::write_row(uchar *buf)
   my_bitmap_map *org_bitmap = tmp_use_all_columns(table, table->read_set);
   for (Field **field = table->field; *field; field++) {
     (*field)->val_str(&attribute, &attribute);
+    send(share->write_fields, (*field)->field_name, strlen((*field)->field_name), 0);
+    send(share->write_fields, ":", 1, 0);
     send(share->write_fields, attribute.ptr(), attribute.length(), 0);
     send(share->write_fields, ",", 1, 0);
   }
