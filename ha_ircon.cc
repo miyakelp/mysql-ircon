@@ -341,7 +341,7 @@ int ha_ircon::close(void)
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-int ha_ircon::init_writer() {
+int ha_ircon::init_writer(const char *ip) {
   DBUG_ENTER("ha_ircon::init_writer");
   if (!share->write_opened) {
     struct sockaddr_in addr;
@@ -350,7 +350,7 @@ int ha_ircon::init_writer() {
     }
     addr.sin_family = AF_INET;
     addr.sin_port = htons(21000);
-    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    addr.sin_addr.s_addr = inet_addr(ip);
     connect(share->write_fields, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
   }
   DBUG_RETURN(0);
@@ -367,7 +367,7 @@ int ha_ircon::write_row(uchar *buf)
   */
 
   if (!share->write_opened) {
-    if (init_writer()) {
+    if (init_writer(table->alias)) {
       DBUG_RETURN(-1);
     }
   }
@@ -386,7 +386,7 @@ int ha_ircon::write_row(uchar *buf)
   tmp_restore_column_map(table->read_set, org_bitmap);
 
   shutdown(share->write_fields, SHUT_RDWR);
-//  close(share->write_fields);
+  my_close(share->write_fields, MYF(0));
   share->write_opened = false;
 
   DBUG_RETURN(0);
