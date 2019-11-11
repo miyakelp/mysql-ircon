@@ -287,13 +287,32 @@ int ha_ircon::open(const char *name, int mode, uint test_if_locked)
   thr_lock_data_init(&share->lock,&lock,NULL);
 
   if (!share->socket_opened) {
+    char *ip_port_buf = new char[32];
+    char *ip_ptr = ip_port_buf;
+    int port = 0;
     struct sockaddr_in addr;
     if((share->socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
       DBUG_RETURN(-1);
     }
+
+    strncpy(ip_port_buf, table_share->table_name.str, 32);
+    for (int i = 0; i < 32; i++) {
+      if (ip_port_buf[i] == ':') {
+        ip_port_buf[i] = '\0';
+        if (i < 31) {
+          port = atoi(ip_port_buf + i + 1);
+        }
+        break;
+      }
+    }
+    if (port == 0) {
+      port = IRCON_DEFAULT_PORT;
+    }
+
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(21000);
-    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = inet_addr(ip_ptr);
+    delete ip_port_buf;
     connect(share->socket, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
     share->socket_opened = true;
 

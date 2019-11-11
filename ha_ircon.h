@@ -43,6 +43,8 @@
 #define IRCON_COMMAND_ANGLE "angle"
 #define IRCON_COMMAND_UNKNOWN "-"
 
+#define IRCON_DEFAULT_PORT 21000
+
 /** @brief
   Ircon_share is a class that will be shared among all open handlers.
   This ircon implements the minimum of what you will probably need.
