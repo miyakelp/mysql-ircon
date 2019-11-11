@@ -95,6 +95,10 @@
 #include "table.h"
 #include "field.h"
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 static handler *ircon_create_handler(handlerton *hton,
                                        TABLE_SHARE *table, 
@@ -111,7 +115,7 @@ static bool ircon_is_supported_system_table(const char *db,
 Ircon_share::Ircon_share()
 {
   thr_lock_init(&lock);
-  this->write_opened = false;
+  this->socket_opened = false;
 }
 
 
@@ -282,6 +286,17 @@ int ha_ircon::open(const char *name, int mode, uint test_if_locked)
     DBUG_RETURN(1);
   thr_lock_data_init(&share->lock,&lock,NULL);
 
+  if (!share->socket_opened) {
+    struct sockaddr_in addr;
+    if((share->socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+      DBUG_RETURN(-1);
+    }
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(21000);
+    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    connect(share->socket, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
+    share->socket_opened = true;
+  }
   DBUG_RETURN(0);
 }
 
@@ -304,6 +319,11 @@ int ha_ircon::open(const char *name, int mode, uint test_if_locked)
 int ha_ircon::close(void)
 {
   DBUG_ENTER("ha_ircon::close");
+
+  shutdown(share->socket, SHUT_RDWR);
+  my_close(share->socket, MYF(0));
+  share->socket_opened = false;
+
   DBUG_RETURN(0);
 }
 
@@ -337,22 +357,8 @@ int ha_ircon::close(void)
   item_sum.cc, item_sum.cc, sql_acl.cc, sql_insert.cc,
   sql_insert.cc, sql_select.cc, sql_table.cc, sql_udf.cc and sql_update.cc
 */
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 int ha_ircon::init_writer(const char *ip) {
   DBUG_ENTER("ha_ircon::init_writer");
-  if (!share->write_opened) {
-    struct sockaddr_in addr;
-    if((share->write_fields = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-      DBUG_RETURN(-1);
-    }
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(21000);
-    addr.sin_addr.s_addr = inet_addr(ip);
-    connect(share->write_fields, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
-  }
   DBUG_RETURN(0);
 }
 
@@ -366,7 +372,7 @@ int ha_ircon::write_row(uchar *buf)
     here, to pretend that the insert was successful.
   */
 
-  if (!share->write_opened) {
+  if (!share->socket_opened) {
     if (init_writer(table->alias)) {
       DBUG_RETURN(-1);
     }
@@ -377,17 +383,14 @@ int ha_ircon::write_row(uchar *buf)
   my_bitmap_map *org_bitmap = tmp_use_all_columns(table, table->read_set);
   for (Field **field = table->field; *field; field++) {
     (*field)->val_str(&attribute, &attribute);
-    send(share->write_fields, (*field)->field_name, strlen((*field)->field_name), 0);
-    send(share->write_fields, ":", 1, 0);
-    send(share->write_fields, attribute.ptr(), attribute.length(), 0);
-    send(share->write_fields, ",", 1, 0);
+    send(share->socket, (*field)->field_name, strlen((*field)->field_name), 0);
+    send(share->socket, ":", 1, 0);
+    send(share->socket, attribute.ptr(), attribute.length(), 0);
+    send(share->socket, ",", 1, 0);
   }
-  send(share->write_fields, "\n", 1, 0);
+  send(share->socket, "\n", 1, 0);
   tmp_restore_column_map(table->read_set, org_bitmap);
 
-  shutdown(share->write_fields, SHUT_RDWR);
-  my_close(share->write_fields, MYF(0));
-  share->write_opened = false;
 
   DBUG_RETURN(0);
 }

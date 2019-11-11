@@ -43,8 +43,8 @@
 class Ircon_share : public Handler_share {
 public:
   THR_LOCK lock;
-  int write_fields;
-  bool write_opened;
+  int socket;
+  bool socket_opened;
 
   Ircon_share();
 
