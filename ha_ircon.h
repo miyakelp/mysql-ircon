@@ -36,6 +36,13 @@
 #include "handler.h"                     /* handler */
 #include "my_base.h"                     /* ha_rows */
 
+#define IRCON_COMMAND_LENGTH 8
+#define IRCON_COMMAND_MODE "mode"
+#define IRCON_COMMAND_TEMPERATURE "temperature"
+#define IRCON_COMMAND_POWER "power"
+#define IRCON_COMMAND_ANGLE "angle"
+#define IRCON_COMMAND_UNKNOWN "-"
+
 /** @brief
   Ircon_share is a class that will be shared among all open handlers.
   This ircon implements the minimum of what you will probably need.
@@ -45,6 +52,11 @@ public:
   THR_LOCK lock;
   int socket;
   bool socket_opened;
+
+  char state_mode[8];
+  char state_temperature[8];
+  char state_power[8];
+  char state_angle[8];
 
   Ircon_share();
 

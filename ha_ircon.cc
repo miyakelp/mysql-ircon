@@ -296,6 +296,11 @@ int ha_ircon::open(const char *name, int mode, uint test_if_locked)
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     connect(share->socket, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
     share->socket_opened = true;
+
+    strncpy(share->state_mode, IRCON_COMMAND_UNKNOWN, IRCON_COMMAND_LENGTH);
+    strncpy(share->state_temperature, IRCON_COMMAND_UNKNOWN, IRCON_COMMAND_LENGTH);
+    strncpy(share->state_power, IRCON_COMMAND_UNKNOWN, IRCON_COMMAND_LENGTH);
+    strncpy(share->state_angle, IRCON_COMMAND_UNKNOWN, IRCON_COMMAND_LENGTH);
   }
   DBUG_RETURN(0);
 }
@@ -383,14 +388,34 @@ int ha_ircon::write_row(uchar *buf)
   my_bitmap_map *org_bitmap = tmp_use_all_columns(table, table->read_set);
   for (Field **field = table->field; *field; field++) {
     (*field)->val_str(&attribute, &attribute);
-    send(share->socket, (*field)->field_name, strlen((*field)->field_name), 0);
-    send(share->socket, ":", 1, 0);
-    send(share->socket, attribute.ptr(), attribute.length(), 0);
+
+    if (strncmp((*field)->field_name, IRCON_COMMAND_MODE, strlen((*field)->field_name)) == 0) {
+      if (attribute.length() > 0) strncpy(share->state_mode, attribute.ptr(), IRCON_COMMAND_LENGTH);
+      send(share->socket, (*field)->field_name, strlen((*field)->field_name), 0);
+      send(share->socket, ":", 1, 0);
+      send(share->socket, share->state_mode, strlen(share->state_mode), 0);
+    } else if (strncmp((*field)->field_name, IRCON_COMMAND_TEMPERATURE, strlen((*field)->field_name)) == 0) {
+      if (attribute.length() > 0) strncpy(share->state_temperature, attribute.ptr(), IRCON_COMMAND_LENGTH);
+      send(share->socket, (*field)->field_name, strlen((*field)->field_name), 0);
+      send(share->socket, ":", 1, 0);
+      send(share->socket, share->state_temperature, strlen(share->state_temperature), 0);
+    } else if (strncmp((*field)->field_name, IRCON_COMMAND_POWER, strlen((*field)->field_name)) == 0) {
+      if (attribute.length() > 0) strncpy(share->state_power, attribute.ptr(), IRCON_COMMAND_LENGTH);
+      send(share->socket, (*field)->field_name, strlen((*field)->field_name), 0);
+      send(share->socket, ":", 1, 0);
+      send(share->socket, share->state_power, strlen(share->state_power), 0);
+    } else if (strncmp((*field)->field_name, IRCON_COMMAND_ANGLE, strlen((*field)->field_name)) == 0) {
+      if (attribute.length() > 0) strncpy(share->state_angle, attribute.ptr(), IRCON_COMMAND_LENGTH);
+      send(share->socket, (*field)->field_name, strlen((*field)->field_name), 0);
+      send(share->socket, ":", 1, 0);
+      send(share->socket, share->state_angle, strlen(share->state_angle), 0);
+    } else {
+      continue;
+    }
     send(share->socket, ",", 1, 0);
   }
   send(share->socket, "\n", 1, 0);
   tmp_restore_column_map(table->read_set, org_bitmap);
-
 
   DBUG_RETURN(0);
 }
@@ -594,25 +619,39 @@ int ha_ircon::rnd_next(uchar *buf)
 {
   my_bitmap_map *org_bitmap;
   int rc;
+  char *res = NULL;
   DBUG_ENTER("ha_ircon::rnd_next");
+
   MYSQL_READ_ROW_START(table_share->db.str, table_share->table_name.str,
                        TRUE);
+
+  if (next_is_eof) {
+    rc= HA_ERR_END_OF_FILE;
+    MYSQL_READ_ROW_DONE(rc);
+    DBUG_RETURN(rc);
+  }
 
   memset(buf, 0, table->s->null_bytes);
   org_bitmap = tmp_use_all_columns(table, table->write_set);
   for (Field **field = table->field; *field; field++) {
-    (*field)->store("-", strlen("-"), system_charset_info);
+    if (strncmp((*field)->field_name, IRCON_COMMAND_MODE, strlen(IRCON_COMMAND_MODE)) == 0) {
+      res = share->state_mode;
+    } else if (strncmp((*field)->field_name, IRCON_COMMAND_TEMPERATURE, strlen(IRCON_COMMAND_TEMPERATURE)) == 0) {
+      res = share->state_temperature;
+    } else if (strncmp((*field)->field_name, IRCON_COMMAND_POWER, strlen(IRCON_COMMAND_POWER)) == 0) {
+      res = share->state_power;
+    } else if (strncmp((*field)->field_name, IRCON_COMMAND_ANGLE, strlen(IRCON_COMMAND_ANGLE)) == 0) {
+      res = share->state_angle;
+    } else {
+      res = (char *)IRCON_COMMAND_UNKNOWN;
+    }
+    (*field)->store(res, strlen(res), system_charset_info);
   }
   tmp_restore_column_map(table->write_set, org_bitmap);
   stats.records++;
-  if (!next_is_eof) {
-    next_is_eof = true;
-    DBUG_RETURN(0);
-  }
 
-  rc= HA_ERR_END_OF_FILE;
-  MYSQL_READ_ROW_DONE(rc);
-  DBUG_RETURN(rc);
+  next_is_eof = true;
+  DBUG_RETURN(0);
 }
 
 
