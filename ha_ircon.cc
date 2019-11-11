@@ -421,7 +421,7 @@ int ha_ircon::write_row(uchar *buf)
 */
 int ha_ircon::update_row(const uchar *old_data, uchar *new_data)
 {
-
+  puts("AAAAAAAAAAAAAAAAA");
   DBUG_ENTER("ha_ircon::update_row");
   DBUG_RETURN(HA_ERR_WRONG_COMMAND);
 }
@@ -565,6 +565,7 @@ int ha_ircon::index_last(uchar *buf)
 int ha_ircon::rnd_init(bool scan)
 {
   DBUG_ENTER("ha_ircon::rnd_init");
+  next_is_eof = false;
   DBUG_RETURN(0);
 }
 
@@ -591,10 +592,24 @@ int ha_ircon::rnd_end()
 */
 int ha_ircon::rnd_next(uchar *buf)
 {
+  my_bitmap_map *org_bitmap;
   int rc;
   DBUG_ENTER("ha_ircon::rnd_next");
   MYSQL_READ_ROW_START(table_share->db.str, table_share->table_name.str,
                        TRUE);
+
+  memset(buf, 0, table->s->null_bytes);
+  org_bitmap = tmp_use_all_columns(table, table->write_set);
+  for (Field **field = table->field; *field; field++) {
+    (*field)->store("-", strlen("-"), system_charset_info);
+  }
+  tmp_restore_column_map(table->write_set, org_bitmap);
+  stats.records++;
+  if (!next_is_eof) {
+    next_is_eof = true;
+    DBUG_RETURN(0);
+  }
+
   rc= HA_ERR_END_OF_FILE;
   MYSQL_READ_ROW_DONE(rc);
   DBUG_RETURN(rc);
@@ -695,6 +710,7 @@ int ha_ircon::rnd_pos(uchar *buf, uchar *pos)
 int ha_ircon::info(uint flag)
 {
   DBUG_ENTER("ha_ircon::info");
+  stats.records = 2;
   DBUG_RETURN(0);
 }
 

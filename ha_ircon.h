@@ -63,6 +63,8 @@ class ha_ircon: public handler
   Ircon_share *share;    ///< Shared lock info
   Ircon_share *get_share(); ///< Get the share
 
+  bool next_is_eof;
+
 public:
   ha_ircon(handlerton *hton, TABLE_SHARE *table_arg);
   ~ha_ircon()
