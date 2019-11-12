@@ -386,22 +386,7 @@ int ha_ircon::init_writer(const char *ip) {
   DBUG_RETURN(0);
 }
 
-int ha_ircon::write_row(uchar *buf)
-{
-  DBUG_ENTER("ha_ircon::write_row");
-  /*
-    Ircon of a successful write_row. We don't store the data
-    anywhere; they are thrown away. A real implementation will
-    probably need to do something with 'buf'. We report a success
-    here, to pretend that the insert was successful.
-  */
-
-  if (!share->socket_opened) {
-    if (init_writer(table->alias)) {
-      DBUG_RETURN(-1);
-    }
-  }
-
+int ha_ircon::write_update_row(void) {
   char attribute_buffer[1024];
   String attribute(attribute_buffer, sizeof(attribute_buffer), &my_charset_bin);
   my_bitmap_map *org_bitmap = tmp_use_all_columns(table, table->read_set);
@@ -436,7 +421,13 @@ int ha_ircon::write_row(uchar *buf)
   send(share->socket, "\n", 1, 0);
   tmp_restore_column_map(table->read_set, org_bitmap);
 
-  DBUG_RETURN(0);
+  return 0;
+}
+
+int ha_ircon::write_row(uchar *buf)
+{
+  DBUG_ENTER("ha_ircon::write_row");
+  DBUG_RETURN(write_update_row());
 }
 
 
@@ -465,9 +456,8 @@ int ha_ircon::write_row(uchar *buf)
 */
 int ha_ircon::update_row(const uchar *old_data, uchar *new_data)
 {
-  puts("AAAAAAAAAAAAAAAAA");
   DBUG_ENTER("ha_ircon::update_row");
-  DBUG_RETURN(HA_ERR_WRONG_COMMAND);
+  DBUG_RETURN(write_update_row());
 }
 
 

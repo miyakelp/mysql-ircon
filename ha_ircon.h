@@ -203,6 +203,7 @@ public:
     We implement this in ha_ircon.cc. It's not an obligatory method;
     skip it and and MySQL will treat it as not implemented.
   */
+  int write_update_row(void);
   int init_writer(const char *ip);
   int write_row(uchar *buf);
 
