@@ -394,22 +394,34 @@ int ha_ircon::write_update_row(void) {
     (*field)->val_str(&attribute, &attribute);
 
     if (strncmp((*field)->field_name, IRCON_COMMAND_MODE, strlen((*field)->field_name)) == 0) {
-      if (attribute.length() > 0) strncpy(share->state_mode, attribute.ptr(), IRCON_COMMAND_LENGTH);
+      if (attribute.length() > 0) {
+        strncpy(share->state_mode, attribute.ptr(), attribute.length());
+        share->state_mode[attribute.length()] = '\0';
+      }
       send(share->socket, (*field)->field_name, strlen((*field)->field_name), 0);
       send(share->socket, ":", 1, 0);
       send(share->socket, share->state_mode, strlen(share->state_mode), 0);
     } else if (strncmp((*field)->field_name, IRCON_COMMAND_TEMPERATURE, strlen((*field)->field_name)) == 0) {
-      if (attribute.length() > 0) strncpy(share->state_temperature, attribute.ptr(), IRCON_COMMAND_LENGTH);
+      if (attribute.length() > 0) {
+        strncpy(share->state_temperature, attribute.ptr(), attribute.length());
+        share->state_temperature[attribute.length()] = '\0';
+      }
       send(share->socket, (*field)->field_name, strlen((*field)->field_name), 0);
       send(share->socket, ":", 1, 0);
       send(share->socket, share->state_temperature, strlen(share->state_temperature), 0);
     } else if (strncmp((*field)->field_name, IRCON_COMMAND_POWER, strlen((*field)->field_name)) == 0) {
-      if (attribute.length() > 0) strncpy(share->state_power, attribute.ptr(), IRCON_COMMAND_LENGTH);
+      if (attribute.length() > 0) {
+        strncpy(share->state_power, attribute.ptr(), attribute.length());
+        share->state_power[attribute.length()] = '\0';
+      }
       send(share->socket, (*field)->field_name, strlen((*field)->field_name), 0);
       send(share->socket, ":", 1, 0);
       send(share->socket, share->state_power, strlen(share->state_power), 0);
     } else if (strncmp((*field)->field_name, IRCON_COMMAND_ANGLE, strlen((*field)->field_name)) == 0) {
-      if (attribute.length() > 0) strncpy(share->state_angle, attribute.ptr(), IRCON_COMMAND_LENGTH);
+      if (attribute.length() > 0) {
+        strncpy(share->state_angle, attribute.ptr(), attribute.length());
+        share->state_angle[attribute.length()] = '\0';
+      }
       send(share->socket, (*field)->field_name, strlen((*field)->field_name), 0);
       send(share->socket, ":", 1, 0);
       send(share->socket, share->state_angle, strlen(share->state_angle), 0);
@@ -648,13 +660,13 @@ int ha_ircon::rnd_next(uchar *buf)
   memset(buf, 0, table->s->null_bytes);
   org_bitmap = tmp_use_all_columns(table, table->write_set);
   for (Field **field = table->field; *field; field++) {
-    if (strncmp((*field)->field_name, IRCON_COMMAND_MODE, strlen(IRCON_COMMAND_MODE)) == 0) {
+    if (strncmp((*field)->field_name, IRCON_COMMAND_MODE, (*field)->field_length) == 0) {
       res = share->state_mode;
-    } else if (strncmp((*field)->field_name, IRCON_COMMAND_TEMPERATURE, strlen(IRCON_COMMAND_TEMPERATURE)) == 0) {
+    } else if (strncmp((*field)->field_name, IRCON_COMMAND_TEMPERATURE, (*field)->field_length) == 0) {
       res = share->state_temperature;
-    } else if (strncmp((*field)->field_name, IRCON_COMMAND_POWER, strlen(IRCON_COMMAND_POWER)) == 0) {
+    } else if (strncmp((*field)->field_name, IRCON_COMMAND_POWER, (*field)->field_length) == 0) {
       res = share->state_power;
-    } else if (strncmp((*field)->field_name, IRCON_COMMAND_ANGLE, strlen(IRCON_COMMAND_ANGLE)) == 0) {
+    } else if (strncmp((*field)->field_name, IRCON_COMMAND_ANGLE, (*field)->field_length) == 0) {
       res = share->state_angle;
     } else {
       res = (char *)IRCON_COMMAND_UNKNOWN;
