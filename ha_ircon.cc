@@ -484,7 +484,12 @@ int ha_ircon::update_row(const uchar *old_data, uchar *new_data)
 int ha_ircon::delete_row(const uchar *buf)
 {
   DBUG_ENTER("ha_ircon::delete_row");
-  DBUG_RETURN(HA_ERR_WRONG_COMMAND);
+  strncpy(share->state_mode, IRCON_COMMAND_UNKNOWN, IRCON_COMMAND_LENGTH);
+  strncpy(share->state_temperature, IRCON_COMMAND_UNKNOWN, IRCON_COMMAND_LENGTH);
+  strncpy(share->state_power, IRCON_COMMAND_UNKNOWN, IRCON_COMMAND_LENGTH);
+  strncpy(share->state_angle, IRCON_COMMAND_UNKNOWN, IRCON_COMMAND_LENGTH);
+  send(share->socket, "mode:-,\n", 8, 0);
+  DBUG_RETURN(0);
 }
 
 
